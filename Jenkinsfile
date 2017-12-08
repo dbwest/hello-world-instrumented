@@ -1,7 +1,5 @@
 #!groovy
   
-@Library('github.com/lachie83/jenkins-pipeline@dev')  
-  
 def project = 'chris_ricci'
 def appName = 'hello-world-instrumented'
 def feSvcName = "${appName}"
@@ -10,20 +8,6 @@ def imageTag = "quay.io/${project}/${appName}:v${env.BUILD_NUMBER}"
 def prevImageTag = ''
 def prevBuildNum = ''
 def firstDeploy = false
-def pipeline = new io.estrado.Pipeline()
-
-podTemplate(label: 'jenkins-pipeline', containers: [
-    containerTemplate(name: 'jnlp', image: 'lachlanevenson/jnlp-slave:3.10-1-alpine', args: '${computer.jnlpmac} ${computer.name}', workingDir: '/home/jenkins', resourceRequestCpu: '200m', resourceLimitCpu: '300m', resourceRequestMemory: '256Mi', resourceLimitMemory: '512Mi'),
-    containerTemplate(name: 'docker', image: 'docker:1.12.6', command: 'cat', ttyEnabled: true),
-    containerTemplate(name: 'golang', image: 'golang:1.8.3', command: 'cat', ttyEnabled: true),
-    containerTemplate(name: 'helm', image: 'lachlanevenson/k8s-helm:v2.6.0', command: 'cat', ttyEnabled: true),
-    containerTemplate(name: 'kubectl', image: 'lachlanevenson/k8s-kubectl:v1.4.8', command: 'cat', ttyEnabled: true)
-],
-
-volumes:[
-    hostPathVolume(mountPath: '/var/run/docker.sock', hostPath: '/var/run/docker.sock'),
-]){
-
 
 node {
   // Check if there's a previous deployment, if so, get the image version so we can rollback if needed
@@ -40,10 +24,6 @@ node {
     firstDeploy = true
   }
 
- stage ('dockerize') {
-
-      container('docker') {  
-  
   checkout scm
   sh("printenv")
 	
@@ -55,14 +35,7 @@ node {
 
   stage 'Push image to Quay.io registry'
   sh("docker push ${imageTag}")
-}
-}
 
-    stage ('deploy') {
-
-      container('kubectl') {
-
-  
   // If this is the first deployment
   if (firstDeploy) {
     stage 'First Deployment'
@@ -90,15 +63,7 @@ node {
     sh("kubectl --namespace=${namespace} label deployment hello-world-canary --overwrite version=v${BUILD_NUMBER}")
     sh("kubectl --namespace=${namespace} label pod  -l env=canary --all --overwrite version=v${BUILD_NUMBER}")
   }
-  
-}
-}
-
-  
   stage 'Verify Canary'
-  
-       container('kubectl') {
-	   
   def didTimeout = false
   def userInput = true
   try {
@@ -124,15 +89,10 @@ node {
     }
     error('Aborted')
   }
-}
-
-
 
   if (!firstDeploy) {
   stage 'Rollout to Production' 
-    
-	     container('kubectl') {
-	// Roll out to production environment
+    // Roll out to production environment
     // Change deployed image in canary to the one we just built
     //sh("sed -i.bak 's#quay.io/${project}/${appName}:.*\$#${imageTag}#' ./k8s/production/*.yaml")
     //sh("kubectl --namespace=${namespace} apply -f k8s/production/")
@@ -140,6 +100,5 @@ node {
     sh("kubectl --namespace=${namespace} label deployment hello-world-production --overwrite version=v${BUILD_NUMBER}")
     sh("kubectl --namespace=${namespace} label pod  -l env=production --all --overwrite version=v${BUILD_NUMBER}")
     currentBuild.result = 'SUCCESS'
-	}
   }
 }
