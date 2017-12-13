@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: hello-world 
-        image: quay.io/chris_ricci/hello-world-instrumented:v1
+        image: quay.io/jonathan_johnson/hello-world-instrumented:v1
         imagePullPolicy: Always
         ports:
         - name: web
