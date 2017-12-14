@@ -10,6 +10,8 @@ def prevBuildNum = ''
 def firstDeploy = false
 
 node {
+  // label to use K8s
+  label 'jenkins-jenkins-slave'	
   // Check if there's a previous deployment, if so, get the image version so we can rollback if needed
   try {
     prevImageTag = sh(
