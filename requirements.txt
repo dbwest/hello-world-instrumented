@@ -1,3 +1,5 @@
 Flask==0.10.1
 requests==2.17.3
 flask_prometheus
+
+urllib3>=1.25.9 # not directly required, pinned by Snyk to avoid a vulnerability
